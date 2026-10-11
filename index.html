@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathe-Labor: Kreise & Flächen</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #50E3C2;
+            --danger: #E94A6A;
+            --bg: #F4F7F6;
+            --text: #333;
+            --tool-bg: #e2e8f0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1250px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        
+        .canvas-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            border: 2px solid #999;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            background-color: #fff;
+            position: relative;
+        }
+
+        .grid-canvas {
+            background-size: 20px 20px;
+            background-image: 
+                linear-gradient(to right, #ccc 1px, transparent 1px),
+                linear-gradient(to bottom, #ccc 1px, transparent 1px);
+            cursor: crosshair;
+            display: block;
+            touch-action: none; /* WICHTIG FÜR IPAD: Verhindert Seiten-Scrollen beim Zeichnen */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        #canvas1 { border: 2px solid #999; border-radius: 4px; margin-bottom: 15px;}
+
+        .info-box {
+            background-color: #eef5fc;
+            border-left: 4px solid var(--primary);
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;}
+        
+        .tool-group {
+            background: var(--tool-bg);
+            padding: 5px;
+            border-radius: 8px;
+            display: flex;
+            gap: 5px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s, transform 0.1s;
+        }
+        button:hover { background-color: #357ABD; }
+        button:active { transform: scale(0.97); }
+        button:disabled { background-color: #a0aec0; cursor: not-allowed; transform: none; }
+        
+        .tool-btn { background-color: white; color: var(--text); border: 1px solid #ccc; }
+        .tool-btn:hover { background-color: #f0f0f0; }
+        .tool-btn.active { background-color: var(--secondary); color: #000; font-weight: bold; border-color: var(--secondary); }
+        
+        button.danger { background-color: white; color: var(--danger); border: 1px solid var(--danger); }
+        button.danger.active { background-color: var(--danger); color: white; }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+        .feedback { font-weight: bold; margin-top: 10px; min-height: 24px;}
+        .correct { color: #2ecc71; }
+        .wrong { color: #e74c3c; }
+        
+        .breakdown-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-weight: normal;
+        }
+        .breakdown-box ul { margin: 10px 0; padding-left: 0; list-style-type: none; }
+        .breakdown-box li { margin-bottom: 8px; display: flex; align-items: center; }
+
+        .number-badge {
+            display: inline-block;
+            background-color: #f1c40f;
+            color: #000;
+            font-weight: bold;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            border-radius: 50%;
+            border: 1px solid #000;
+            margin-right: 10px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; position: relative;}
+
+        /* --- TASCHENRECHNER CSS --- */
+        .calculator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            width: 170px;
+            z-index: 100;
+        }
+        .calc-display {
+            background: #ecf0f1;
+            border-radius: 4px;
+            padding: 6px 10px;
+            text-align: right;
+            font-family: monospace;
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            min-height: 24px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .calc-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .calc-keys button {
+            background-color: #34495e;
+            padding: 8px 0;
+            font-size: 15px;
+            border-radius: 4px;
+            border: 1px solid #22313f;
+        }
+        .calc-keys button:hover { background-color: #415b76; }
+        .calc-keys button.calc-op { background-color: #e67e22; }
+        .calc-keys button.calc-op:hover { background-color: #d35400; }
+        .calc-keys button.calc-clear { background-color: #c0392b; }
+        .calc-keys button.calc-clear:hover { background-color: #e74c3c; }
+        .calc-keys button.calc-pi { background-color: #9b59b6; }
+        .calc-title {
+            color: #bdc3c7;
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📐 Entdecke die Welt der Kreise und Flächen!</h1>
+    <p>Hallo! Willkommen in deinem interaktiven Mathe-Labor. Hier kannst du den Umgang mit Kreisen und zusammengesetzten Flächen üben.</p>
+    
+    <div class="info-box">
+        <strong>WICHTIG:</strong> Das Gitter im Hintergrund besteht aus Karos. 
+        <br><strong>1 Karo = 0,5 cm</strong> (2 Karos sind also 1 cm).
+        <br><br><i>Tipp für das iPad: Um die Seite zu scrollen, wische außerhalb der karierten Zeichenfläche. Auf der Zeichenfläche zeichnest du!</i>
+    </div>
+
+    <div class="tab-buttons">
+        <button id="btnTab1" class="active" onclick="switchTab(1)">Teil 1: Grundlagen üben</button>
+        <button id="btnTab2" onclick="switchTab(2)">Teil 2: Kreativwerkstatt (Flächen bauen)</button>
+    </div>
+
+    <!-- TEIL 1: GRUNDLAGEN -->
+    <div id="tab1" class="tab-content active">
+        <h2>1. Kreisausschnitte & Bogenlänge berechnen</h2>
+        <p>Lies den Radius und den Winkel aus der Zeichnung ab. Berechne dann die Fläche (<i>A</i>) und die Bogenlänge (<i>b</i>).</p>
+        
+        <canvas id="canvas1" width="400" height="400" class="grid-canvas"></canvas>
+        
+        <div class="controls">
+            <button onclick="generateRandomShape()">Neue Figur zeichnen</button>
+        </div>
+        
+        <div class="controls">
+            <label>Fläche <i>A</i> (cm&sup2;): <input type="number" step="0.01" id="ansA"></label>
+            <label>Bogenlänge <i>b</i> (cm): <input type="number" step="0.01" id="ansB"></label>
+            <button onclick="checkAnswers()">Ergebnis prüfen</button>
+        </div>
+        <div id="feedback1" class="feedback"></div>
+    </div>
+
+    <!-- TEIL 2: KREATIVWERKSTATT -->
+    <div id="tab2" class="tab-content">
+        <h2>2. Zusammengesetzte Flächen erstellen</h2>
+        <p>Zeichne deine eigenen Flächen! Die Werkzeuge rasten immer exakt an ganzen Karos ein.<br>
+        <i>Tipp für das iPad: Um eine Figur zu drehen, tippe einfach <b>mit einem zweiten Finger</b> auf den Bildschirm, während du die Form gerade ziehst!</i></p>
+        
+        <div class="controls">
+            <div class="tool-group">
+                <button id="toolRect" class="tool-btn active" onclick="setTool('rect')">Rechteck</button>
+                <button id="toolCircle" class="tool-btn" onclick="setTool('circle')">Kreis</button>
+                <button id="toolHalfCircle" class="tool-btn" onclick="setTool('halfCircle')">Halbkreis</button>
+                <button id="toolQuarterCircle" class="tool-btn" onclick="setTool('quarterCircle')">Viertelkreis</button>
+                <button onclick="rotateTool()" style="background-color: #666;">↻ Drehen (R)</button>
+            </div>
+            
+            <div class="tool-group" style="margin-left: 10px;">
+                <button id="modeAdd" class="tool-btn active" onclick="setMode('add')">Hinzufügen (+)</button>
+                <button id="modeSub" class="danger" onclick="setMode('sub')">Wegschneiden (-)</button>
+            </div>
+            
+            <div class="tool-group" style="margin-left: auto;">
+                <button id="btnUndo" onclick="undo()" disabled>&#x21A9; Zurück</button>
+                <button id="btnRedo" onclick="redo()" disabled>&#x21AA; Vor</button>
+                <button onclick="clearCanvas2()" style="background-color: #999;">Alles löschen</button>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <!-- TASCHENRECHNER -->
+            <div class="calculator">
+                <div class="calc-title">Mini-Rechner</div>
+                <div class="calc-display" id="calcDisplay">0</div>
+                <div class="calc-keys">
+                    <button onclick="calcPress('7')">7</button>
+                    <button onclick="calcPress('8')">8</button>
+                    <button onclick="calcPress('9')">9</button>
+                    <button class="calc-clear" onclick="calcPress('C')">C</button>
+                    
+                    <button onclick="calcPress('4')">4</button>
+                    <button onclick="calcPress('5')">5</button>
+                    <button onclick="calcPress('6')">6</button>
+                    <button class="calc-op" onclick="calcPress('*')">&times;</button>
+                    
+                    <button onclick="calcPress('1')">1</button>
+                    <button onclick="calcPress('2')">2</button>
+                    <button onclick="calcPress('3')">3</button>
+                    <button class="calc-op" onclick="calcPress('-')">-</button>
+                    
+                    <button onclick="calcPress('0')">0</button>
+                    <button class="calc-op" onclick="calcPress('²')">x&sup2;</button>
+                    <button class="calc-pi" onclick="calcPress('pi')">&pi;</button>
+                    <button class="calc-op" onclick="calcPress('+')">+</button>
+                    
+                    <button class="calc-op" onclick="calcPress('=')" style="grid-column: span 4;">=</button>
+                </div>
+            </div>
+
+            <canvas id="canvas2" width="1200" height="800" class="grid-canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <label>Deine Berechnung: Gesamtfläche (cm&sup2;): <input type="number" step="0.01" id="ansArea2"></label>
+            <button onclick="checkCompositeArea()">Fläche kontrollieren & Rechenweg anzeigen</button>
+        </div>
+        <div id="feedback2" class="feedback"></div>
+        <div id="breakdown" style="display: none;"></div>
+    </div>
+
+</div>
+
+<script>
+    // --- GLOBALE VARIABLEN ---
+    const gridPx = 20; // 1 Karo = 20 Pixel
+    const cmPerGrid = 0.5; // 1 Karo = 0.5 cm
+    
+    // --- TEIL 1: GRUNDLAGEN ---
+    let currentTask = { r_cm: 0, angle: 0, area: 0, arc: 0 };
+    const canvas1 = document.getElementById('canvas1');
+    const ctx1 = canvas1.getContext('2d');
+
+    function drawGrid(ctx, width, height) { ctx.clearRect(0, 0, width, height); }
+
+    function generateRandomShape() {
+        drawGrid(ctx1, canvas1.width, canvas1.height);
+        
+        const r_grids = Math.floor(Math.random() * 8) + 4; 
+        currentTask.r_cm = r_grids * cmPerGrid;
+        
+        const angles = [45, 90, 135, 180, 270, 360];
+        currentTask.angle = angles[Math.floor(Math.random() * angles.length)];
+        
+        currentTask.area = Math.PI * Math.pow(currentTask.r_cm, 2) * (currentTask.angle / 360);
+        currentTask.arc = 2 * Math.PI * currentTask.r_cm * (currentTask.angle / 360);
+        
+        const cx = canvas1.width / 2;
+        const cy = canvas1.height / 2;
+        const r_px = r_grids * gridPx;
+        const startAngle = 0;
+        const endAngle = (currentTask.angle * Math.PI) / 180;
+        
+        ctx1.beginPath();
+        ctx1.moveTo(cx, cy);
+        ctx1.arc(cx, cy, r_px, startAngle, endAngle);
+        ctx1.lineTo(cx, cy);
+        
+        ctx1.fillStyle = 'rgba(74, 144, 226, 0.6)';
+        ctx1.fill();
+        ctx1.lineWidth = 2;
+        ctx1.strokeStyle = '#333';
+        ctx1.stroke();
+        
+        ctx1.beginPath();
+        ctx1.arc(cx, cy, 4, 0, 2*Math.PI);
+        ctx1.fillStyle = '#E94A6A';
+        ctx1.fill();
+
+        document.getElementById('ansA').value = '';
+        document.getElementById('ansB').value = '';
+        document.getElementById('feedback1').innerHTML = '';
+    }
+
+    function checkAnswers() {
+        const userA = parseFloat(document.getElementById('ansA').value);
+        const userB = parseFloat(document.getElementById('ansB').value);
+        const feedback = document.getElementById('feedback1');
+        
+        if(isNaN(userA) || isNaN(userB)) {
+            feedback.innerHTML = '<span class="wrong">Bitte trage beide Werte ein!</span>';
+            return;
+        }
+
+        const isACorrect = Math.abs(userA - currentTask.area) < (currentTask.area * 0.03 + 0.1);
+        const isBCorrect = Math.abs(userB - currentTask.arc) < (currentTask.arc * 0.03 + 0.1);
+
+        if(isACorrect && isBCorrect) {
+            feedback.innerHTML = `<span class="correct">Klasse! Beide Werte sind richtig. (Exakt: <i>A</i> &approx; ${currentTask.area.toFixed(2)} cm&sup2;, <i>b</i> &approx; ${currentTask.arc.toFixed(2)} cm)</span>`;
+        } else {
+            let msg = '<span class="wrong">Noch nicht ganz richtig. Überprüfe:</span><ul>';
+            if(!isACorrect) msg += `<li>Fläche (<i>A</i>). Denke an: <i>A</i> = &pi; &middot; r&sup2; &middot; (&alpha; / 360&deg;)</li>`;
+            if(!isBCorrect) msg += `<li>Bogenlänge (<i>b</i>). Denke an: <i>b</i> = 2 &middot; &pi; &middot; r &middot; (&alpha; / 360&deg;)</li>`;
+            msg += '</ul>';
+            feedback.innerHTML = msg;
+        }
+    }
+
+    // --- TEIL 2: KREATIVWERKSTATT ---
+    const canvas2 = document.getElementById('canvas2');
+    const ctx2 = canvas2.getContext('2d');
+    
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = canvas2.width;
+    offCanvas.height = canvas2.height;
+    const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+    
+    let shapes = [];
+    let history = [[]]; 
+    let historyStep = 0;
+
+    let isDrawing = false;
+    let startX, startY, currentX, currentY;
+    let tool = 'rect'; 
+    let drawMode = 'add'; 
+    let currentRotation = 0; 
+
+    // --- TASCHENRECHNER LOGIK ---
+    let calcExpr = "";
+    function calcPress(val) {
+        const display = document.getElementById('calcDisplay');
+        if (val === 'C') {
+            calcExpr = "";
+        } else if (val === '=') {
+            try {
+                // Konvertierung für Javascript: 'pi' zu Math.PI und '²' zu **2
+                let evalString = calcExpr.replace(/pi/g, 'Math.PI').replace(/²/g, '**2');
+                
+                // Sicherheit: Erlaube nur sichere mathematische Zeichen
+                if (/^[0-9+\-*.\sM\a\t\h\P\I]+$/.test(evalString) && evalString !== "") {
+                    let result = new Function('return ' + evalString)();
+                    // Ergebnis auf zwei Nachkommastellen runden
+                    calcExpr = (Math.round(result * 100) / 100).toString();
+                } else {
+                    calcExpr = "Fehler";
+                }
+            } catch(e) {
+                calcExpr = "Fehler";
+            }
+        } else {
+            if(calcExpr === "Fehler" || calcExpr === "0") calcExpr = "";
+            calcExpr += val;
+        }
+        
+        let visualText = calcExpr.replace(/pi/g, 'π') || "0";
+        display.innerText = visualText;
+    }
+
+    function updateHistoryButtons() {
+        document.getElementById('btnUndo').disabled = historyStep === 0;
+        document.getElementById('btnRedo').disabled = historyStep === history.length - 1;
+    }
+
+    function saveState() {
+        historyStep++;
+        history = history.slice(0, historyStep); 
+        history.push(JSON.parse(JSON.stringify(shapes))); 
+        updateHistoryButtons();
+    }
+
+    function undo() {
+        if (historyStep > 0) {
+            historyStep--;
+            shapes = JSON.parse(JSON.stringify(history[historyStep]));
+            redrawAll();
+            hideBreakdown();
+            updateHistoryButtons();
+        }
+    }
+
+    function redo() {
+        if (historyStep < history.length - 1) {
+            historyStep++;
+            shapes = JSON.parse(JSON.stringify(history[historyStep]));
+            redrawAll();
+            hideBreakdown();
+            updateHistoryButtons();
+        }
+    }
+
+    // Garantiert exakt auf dem Karo-Gitter
+    function snap(value) {
+        return Math.round(value / gridPx) * gridPx;
+    }
+
+    function setTool(t) {
+        tool = t;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('modeAdd').classList.toggle('active', drawMode === 'add');
+        
+        if(t === 'rect') document.getElementById('toolRect').classList.add('active');
+        if(t === 'circle') document.getElementById('toolCircle').classList.add('active');
+        if(t === 'halfCircle') document.getElementById('toolHalfCircle').classList.add('active');
+        if(t === 'quarterCircle') document.getElementById('toolQuarterCircle').classList.add('active');
+    }
+
+    function setMode(m) {
+        drawMode = m;
+        document.getElementById('modeAdd').classList.remove('active');
+        document.getElementById('modeSub').classList.remove('active');
+        if(m === 'add') document.getElementById('modeAdd').classList.add('active');
+        if(m === 'sub') document.getElementById('modeSub').classList.add('active');
+    }
+
+    function rotateTool() {
+        currentRotation = (currentRotation + 1) % 4;
+        if(isDrawing) {
+            redrawAll();
+            drawPreview();
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if((e.key === 'r' || e.key === 'R') && document.getElementById('tab2').classList.contains('active')) {
+            rotateTool();
+        }
+    });
+
+    // --- TOUCH & MAUS EREIGNISSE ---
+    function getEventPos(e) {
+        const rect = canvas2.getBoundingClientRect();
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function handleStart(e) {
+        if(e.type === 'touchstart') {
+            e.preventDefault(); // Verhindert mitwischen der Seite
+            // Zweiter Finger aufs iPad = Drehen
+            if (e.touches.length > 1 && isDrawing) {
+                rotateTool();
+                return;
+            }
+        }
+        const pos = getEventPos(e);
+        startX = snap(pos.x);
+        startY = snap(pos.y);
+        isDrawing = true;
+        hideBreakdown(); 
+        redrawAll(); 
+    }
+
+    function handleMove(e) {
+        if(e.type === 'touchmove') e.preventDefault();
+        if(!isDrawing) return;
+        const pos = getEventPos(e);
+        currentX = snap(pos.x);
+        currentY = snap(pos.y);
+        redrawAll();
+        drawPreview();
+    }
+
+    function handleEnd(e) {
+        if(e.type === 'touchend' || e.type === 'touchcancel') {
+            e.preventDefault();
+            // Wenn der zweite Finger angehoben wird, aber der erste noch zeichnet, brich nicht ab!
+            if (e.touches.length > 0) return; 
+        }
+        if(!isDrawing) return;
+        isDrawing = false;
+        
+        if(startX === currentX && startY === currentY) {
+            redrawAll(); 
+            return;
+        }
+
+        if(tool === 'rect') {
+            shapes.push({
+                type: 'rect',
+                x: Math.min(startX, currentX),
+                y: Math.min(startY, currentY),
+                w: Math.abs(currentX - startX),
+                h: Math.abs(currentY - startY),
+                mode: drawMode
+            });
+            saveState();
+        } else {
+            // Radius exakt an ganzen Karos ausrichten!
+            const r = Math.round(Math.hypot(currentX - startX, currentY - startY) / gridPx) * gridPx;
+            if (r > 0) {
+                shapes.push({
+                    type: tool,
+                    x: startX,
+                    y: startY,
+                    r: r,
+                    rot: currentRotation,
+                    mode: drawMode
+                });
+                saveState();
+            }
+        }
+        redrawAll();
+    }
+
+    // Maus-Listener
+    canvas2.addEventListener('mousedown', handleStart);
+    canvas2.addEventListener('mousemove', handleMove);
+    canvas2.addEventListener('mouseup', handleEnd);
+    canvas2.addEventListener('mouseleave', () => { if(isDrawing) handleEnd({type: 'mouseup'}); });
+
+    // Touch-Listener (iPad)
+    canvas2.addEventListener('touchstart', handleStart, { passive: false });
+    canvas2.addEventListener('touchmove', handleMove, { passive: false });
+    canvas2.addEventListener('touchend', handleEnd, { passive: false });
+    canvas2.addEventListener('touchcancel', handleEnd, { passive: false });
+
+    function drawShapePath(ctx, s) {
+        ctx.beginPath();
+        if(s.type === 'rect') {
+            ctx.rect(s.x, s.y, s.w, s.h);
+        } else if (s.type === 'circle') {
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        } else if (s.type === 'halfCircle') {
+            ctx.moveTo(s.x, s.y);
+            ctx.arc(s.x, s.y, s.r, s.rot * Math.PI/2, (s.rot * Math.PI/2) + Math.PI);
+            ctx.closePath();
+        } else if (s.type === 'quarterCircle') {
+            ctx.moveTo(s.x, s.y);
+            ctx.arc(s.x, s.y, s.r, s.rot * Math.PI/2, (s.rot * Math.PI/2) + Math.PI/2);
+            ctx.closePath();
+        }
+    }
+
+    function redrawAll() {
+        offCtx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+        
+        shapes.forEach(s => {
+            offCtx.globalCompositeOperation = s.mode === 'add' ? 'source-over' : 'destination-out';
+            offCtx.fillStyle = '#4A90E2'; 
+            drawShapePath(offCtx, s);
+            offCtx.fill();
+        });
+        
+        ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+        ctx2.globalAlpha = 0.6;
+        ctx2.drawImage(offCanvas, 0, 0);
+        ctx2.globalAlpha = 1.0;
+    }
+
+    function drawPreview() {
+        ctx2.globalAlpha = 0.4;
+        ctx2.fillStyle = drawMode === 'add' ? '#4A90E2' : '#E94A6A';
+        
+        let previewShape = { type: tool, mode: drawMode, rot: currentRotation };
+        let r = 0;
+        if(tool === 'rect') {
+            previewShape.x = Math.min(startX, currentX);
+            previewShape.y = Math.min(startY, currentY);
+            previewShape.w = Math.abs(currentX - startX);
+            previewShape.h = Math.abs(currentY - startY);
+        } else {
+            previewShape.x = startX;
+            previewShape.y = startY;
+            // Radius-Snapping auch in der Live-Vorschau aktiv
+            r = Math.round(Math.hypot(currentX - startX, currentY - startY) / gridPx) * gridPx;
+            previewShape.r = r;
+        }
+        
+        drawShapePath(ctx2, previewShape);
+        ctx2.fill();
+        ctx2.globalAlpha = 1.0;
+
+        // Roter Faden / Fadenkreuz
+        if(tool !== 'rect' && r > 0) {
+            ctx2.beginPath();
+            ctx2.arc(startX, startY, 5, 0, Math.PI * 2);
+            ctx2.fillStyle = '#E94A6A';
+            ctx2.fill();
+
+            ctx2.beginPath();
+            ctx2.moveTo(startX, startY);
+            ctx2.lineTo(currentX, currentY);
+            ctx2.strokeStyle = '#E94A6A';
+            ctx2.lineWidth = 2;
+            ctx2.stroke();
+
+            let r_cm = (r / gridPx) * cmPerGrid;
+            ctx2.font = "bold 16px sans-serif";
+            ctx2.fillStyle = "#E94A6A";
+            ctx2.fillText(`r = ${r_cm} cm`, currentX + 10, currentY - 10);
+        } else if (tool === 'rect') {
+            let w_cm = (previewShape.w / gridPx) * cmPerGrid;
+            let h_cm = (previewShape.h / gridPx) * cmPerGrid;
+            if (w_cm > 0 && h_cm > 0) {
+                ctx2.font = "bold 16px sans-serif";
+                ctx2.fillStyle = drawMode === 'add' ? '#4A90E2' : '#E94A6A';
+                ctx2.fillText(`a = ${w_cm} cm | b = ${h_cm} cm`, currentX + 10, currentY - 10);
+            }
+        }
+    }
+
+    function clearCanvas2() {
+        shapes = [];
+        saveState(); 
+        redrawAll();
+        document.getElementById('ansArea2').value = '';
+        hideBreakdown();
+    }
+
+    function calculateActualArea() {
+        const imgData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+        let filledPixels = 0;
+        for(let i = 3; i < imgData.data.length; i += 4) {
+            if(imgData.data[i] > 128) filledPixels++;
+        }
+        const pixelsPerCm2 = (gridPx / cmPerGrid) * (gridPx / cmPerGrid);
+        return filledPixels / pixelsPerCm2;
+    }
+
+    function hideBreakdown() {
+        document.getElementById('feedback2').innerHTML = '';
+        document.getElementById('breakdown').style.display = 'none';
+    }
+
+    function drawShapeOutlines() {
+        shapes.forEach((s, index) => {
+            ctx2.save();
+            ctx2.strokeStyle = '#e67e22'; 
+            ctx2.lineWidth = 3;
+            ctx2.setLineDash([8, 4]); 
+            drawShapePath(ctx2, s);
+            ctx2.stroke();
+            
+            let cx = s.x, cy = s.y;
+            if (s.type === 'rect') {
+                cx = s.x + s.w / 2;
+                cy = s.y + s.h / 2;
+            } else if (s.type === 'halfCircle') {
+                if(s.rot === 0) cy += s.r / 2;
+                else if(s.rot === 1) cx -= s.r / 2;
+                else if(s.rot === 2) cy -= s.r / 2;
+                else if(s.rot === 3) cx += s.r / 2;
+            } else if (s.type === 'quarterCircle') {
+                const offset = s.r / 2.5;
+                if(s.rot === 0) { cx += offset; cy += offset; }
+                else if(s.rot === 1) { cx -= offset; cy += offset; }
+                else if(s.rot === 2) { cx -= offset; cy -= offset; }
+                else if(s.rot === 3) { cx += offset; cy -= offset; }
+            }
+
+            ctx2.beginPath();
+            ctx2.arc(cx, cy, 14, 0, Math.PI * 2);
+            ctx2.fillStyle = '#f1c40f';
+            ctx2.fill();
+            ctx2.strokeStyle = '#000';
+            ctx2.setLineDash([]);
+            ctx2.lineWidth = 1;
+            ctx2.stroke();
+
+            ctx2.fillStyle = '#000';
+            ctx2.font = 'bold 16px Arial';
+            ctx2.textAlign = 'center';
+            ctx2.textBaseline = 'middle';
+            ctx2.fillText(index + 1, cx, cy);
+
+            ctx2.restore();
+        });
+    }
+
+    function generateBreakdownHTML(realArea) {
+        if(shapes.length === 0) return '';
+        
+        let html = '<div class="breakdown-box">';
+        html += '<h3>So setzt sich deine Figur zusammen:</h3><ul>';
+        
+        let mathSum = 0;
+
+        shapes.forEach((s, index) => {
+            let sign = s.mode === 'add' ? '+' : '-';
+            let color = s.mode === 'add' ? '#2ecc71' : '#e74c3c';
+            let name, formula, area;
+
+            if (s.type === 'rect') {
+                name = 'Rechteck';
+                let w_cm = (s.w / gridPx) * cmPerGrid;
+                let h_cm = (s.h / gridPx) * cmPerGrid;
+                formula = `<i>A</i> = a &middot; b = ${w_cm} &middot; ${h_cm}`;
+                area = w_cm * h_cm;
+            } else {
+                let r_cm = (s.r / gridPx) * cmPerGrid;
+                if (s.type === 'circle') {
+                    name = 'Kreis';
+                    formula = `<i>A</i> = &pi; &middot; r&sup2; = &pi; &middot; ${r_cm}&sup2;`;
+                    area = Math.PI * Math.pow(r_cm, 2);
+                } else if (s.type === 'halfCircle') {
+                    name = 'Halbkreis';
+                    formula = `<i>A</i> = &frac12; &middot; &pi; &middot; r&sup2; = &frac12; &middot; &pi; &middot; ${r_cm}&sup2;`;
+                    area = 0.5 * Math.PI * Math.pow(r_cm, 2);
+                } else if (s.type === 'quarterCircle') {
+                    name = 'Viertelkreis';
+                    formula = `<i>A</i> = &frac14; &middot; &pi; &middot; r&sup2; = &frac14; &middot; &pi; &middot; ${r_cm}&sup2;`;
+                    area = 0.25 * Math.PI * Math.pow(r_cm, 2);
+                }
+            }
+
+            if (s.mode === 'add') mathSum += area;
+            else mathSum -= area;
+
+            html += `<li><span class="number-badge">${index + 1}</span> <b>${name}:</b> &nbsp; <strong style="color:${color};">[${sign}]</strong> &nbsp; ${formula} &approx; ${area.toFixed(2)} cm&sup2;</li>`;
+        });
+
+        html += '</ul>';
+        html += `<p><b>Rein rechnerische Summe der Einzelformeln: &approx; ${mathSum.toFixed(2)} cm&sup2;</b></p>`;
+
+        if(Math.abs(mathSum - realArea) > 0.5) {
+            html += `<p style="color:#d35400; font-size:0.95em;"><i>Hinweis: Deine gezeichneten Formen überlappen sich! Wenn man Formen übereinander zeichnet, ist die Summe der Einzelformeln größer als das eigentliche Objekt auf dem Papier. Das System berechnet die echte, überlappungsfreie Gesamtfläche.</i></p>`;
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function checkCompositeArea() {
+        const userArea = parseFloat(document.getElementById('ansArea2').value);
+        const feedback = document.getElementById('feedback2');
+        const breakdownDiv = document.getElementById('breakdown');
+        
+        if(shapes.length === 0) {
+            feedback.innerHTML = '<span class="wrong">Zeichne zuerst eine Fläche!</span>';
+            breakdownDiv.style.display = 'none';
+            return;
+        }
+        if(isNaN(userArea)) {
+            feedback.innerHTML = '<span class="wrong">Bitte gib deine berechnete Fläche ein!</span>';
+            breakdownDiv.style.display = 'none';
+            return;
+        }
+
+        const realArea = calculateActualArea();
+        const isCorrect = Math.abs(userArea - realArea) < (realArea * 0.05 + 0.2);
+
+        if(isCorrect) {
+            feedback.innerHTML = `<span class="correct">Hervorragend! Die tatsächliche Fläche beträgt ca. ${realArea.toFixed(2)} cm&sup2;. Du hast richtig gerechnet!</span>`;
+        } else {
+            feedback.innerHTML = `<span class="wrong">Das stimmt noch nicht ganz. Dein Wert: ${userArea} cm&sup2;. Kontrollwert: ca. ${realArea.toFixed(2)} cm&sup2;.</span>`;
+        }
+
+        redrawAll(); 
+        drawShapeOutlines();
+
+        breakdownDiv.innerHTML = generateBreakdownHTML(realArea);
+        breakdownDiv.style.display = 'block';
+    }
+
+    function switchTab(tabId) {
+        document.getElementById('tab1').classList.remove('active');
+        document.getElementById('tab2').classList.remove('active');
+        document.getElementById('btnTab1').classList.remove('active');
+        document.getElementById('btnTab2').classList.remove('active');
+        
+        document.getElementById('tab' + tabId).classList.add('active');
+        document.getElementById('btnTab' + tabId).classList.add('active');
+    }
+
+    generateRandomShape();
+    updateHistoryButtons();
+
+</script>
+<!-- rechtliches --><style>.erik-recht{font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;text-align:center;padding:18px 12px 22px;opacity:.75}.erik-recht a{color:inherit}@media print{.erik-recht{display:none}}</style><footer class="erik-recht"><a href="https://erikdahlmann.github.io/impressum.html">Impressum</a> · <a href="https://erikdahlmann.github.io/datenschutz.html">Datenschutz</a></footer><!-- /rechtliches --></body>
+</html>
